@@ -1,139 +1,136 @@
-#  Phần mềm Tối ưu hoá Phân phối (Minimum Cost Flow)
+# Chương Trình Tối Ưu Phân Phối Hàng Hóa (Greedy Algorithm)
 
-##  Giới thiệu
+## Mô Tả
 
-Đây là chương trình **hoạch định kế hoạch phân phối tối ưu**, giúp tìm cách vận chuyển hàng hoá từ các **trạm phát (nơi có hàng)** tới các **trạm thu (nơi cần hàng)** sao cho **tổng chi phí vận chuyển là thấp nhất**.
+Chương trình đơn giản giúp phân phối hàng hóa từ các trạm phát đến các trạm thu với chi phí thấp.
 
-Chương trình áp dụng **thuật toán dòng chi phí cực tiểu (Min-Cost Flow)** – một bài toán kinh điển trong lĩnh vực tối ưu hóa mạng (network optimization).
+### Bài toán:
+- Có nhiều kho hàng (trạm phát) với số lượng hàng khác nhau
+- Có nhiều cửa hàng (trạm thu) cần hàng với nhu cầu khác nhau  
+- Mỗi tuyến vận chuyển có chi phí riêng
+- **Mục tiêu**: Phân phối hàng với chi phí thấp
 
----
+### Thuật toán:
+Chương trình dùng **thuật toán Greedy** (tham lam):
+1. Tìm tuyến đường rẻ nhất còn khả dụng
+2. Chuyển hàng tối đa có thể trên tuyến đó
+3. Lặp lại cho đến khi đáp ứng hết nhu cầu
 
-## ⚙️ Mục tiêu bài toán
+**Ưu điểm**: Đơn giản, dễ hiểu, chạy nhanh  
+**Nhược điểm**: Không đảm bảo tối ưu tuyệt đối trong mọi trường hợp
 
-Cho trước:
-- Một tập **trạm phát (supply nodes)**, mỗi trạm có lượng hàng **Cung (Supply)**.
-- Một tập **trạm thu (demand nodes)**, mỗi trạm có nhu cầu **Nhu cầu (Demand)**.
-- Một bảng **chi phí vận chuyển (Cost Matrix)**, biểu diễn chi phí từ mỗi trạm phát → mỗi trạm thu.
+## Yêu Cầu
 
-👉 Nhiệm vụ: tìm kế hoạch phân phối hàng sao cho:
-- Tất cả nhu cầu được đáp ứng (hoặc tối đa có thể).
-- **Tổng chi phí vận chuyển nhỏ nhất.**
+- Python 3.7+
+- Thư viện: `pandas`, `openpyxl`
 
----
+```bash
+pip install pandas openpyxl
+```
 
-## Dữ liệu đầu vào
+## Cấu Trúc File Excel Đầu Vào
 
-Chương trình đọc dữ liệu từ một file Excel có 3 sheet:
+File Excel cần có **3 sheet**:
 
-### 1. `TramPhat` – Thông tin các trạm phát
+### 1. Sheet "TramPhat" (Trạm Phát)
 | TenTram | Cung |
-|----------|------|
-| A1 | 500 |
-| A2 | 850 |
-| A3 | 450 |
+|---------|------|
+| Kho A   | 100  |
+| Kho B   | 150  |
+| Kho C   | 200  |
 
-### 2. `TramThu` – Thông tin các trạm thu
-| TenTram | NhuCau |
-|----------|--------|
-| B1 | 900 |
-| B2 | 300 |
-| B3 | 150 |
-| B4 | 450 |
+- **TenTram**: Tên trạm phát (kho hàng)
+- **Cung**: Số lượng hàng có sẵn
 
-### 3. `ChiPhi` – Ma trận chi phí
-| TramPhat | B1 | B2 | B3 | B4 |
-|-----------|----|----|----|----|
-| A1 | 31100 | 18000 | 45000 | 8500 |
-| A2 | 26000 | 25000 | 42300 | 22000 |
-| A3 | 29500 | 14000 | 45800 | 19000 |
+### 2. Sheet "TramThu" (Trạm Thu)
+| TenTram    | NhuCau |
+|------------|--------|
+| Cửa hàng 1 | 80     |
+| Cửa hàng 2 | 120    |
+| Cửa hàng 3 | 150    |
 
----
+- **TenTram**: Tên trạm thu (cửa hàng)
+- **NhuCau**: Số lượng hàng cần thiết
 
-##  Thuật toán giải (Min-Cost Flow)
+### 3. Sheet "ChiPhi" (Chi Phí Vận Chuyển)
+| TramPhat | Cửa hàng 1 | Cửa hàng 2 | Cửa hàng 3 |
+|----------|------------|------------|------------|
+| Kho A    | 5          | 8          | 12         |
+| Kho B    | 7          | 6          | 9          |
+| Kho C    | 10         | 11         | 4          |
 
-Dưới đây là mô tả chi tiết **từng bước của thuật toán** được sử dụng trong chương trình:
+- **TramPhat**: Tên trạm phát
+- **Các cột khác**: Chi phí vận chuyển 1 đơn vị hàng từ trạm phát đến từng trạm thu
 
-### **Bước 1: Xây dựng đồ thị luồng (Flow Network)**
+## Cách Sử Dụng
 
-- Mỗi **trạm phát** và **trạm thu** được xem là một **nút (node)** trong đồ thị.  
-- Thêm hai nút đặc biệt:
-  - `SOURCE` (nguồn tổng)
-  - `SINK` (đích tổng)
+### Bước 1: Chuẩn bị file dữ liệu
+Tạo file Excel (ví dụ: `du_lieu_phan_phoi.xlsx`) theo cấu trúc trên
 
-Các loại cạnh (edges):
-1. `SOURCE → Trạm phát`: dung lượng = cung của trạm, chi phí = 0  
-2. `Trạm phát → Trạm thu`: dung lượng rất lớn, chi phí = giá vận chuyển  
-3. `Trạm thu → SINK`: dung lượng = nhu cầu, chi phí = 0
-
----
-
-### **Bước 2: Thuật toán tìm dòng chi phí cực tiểu**
-
-Chương trình sử dụng **Successive Shortest Path Algorithm (Luồng ngắn nhất lặp lại)**:
-
-1. Khởi tạo tổng luồng = 0, tổng chi phí = 0.  
-2. Trong khi vẫn còn nhu cầu chưa được đáp ứng:
-   - Tìm **đường đi chi phí thấp nhất** từ `SOURCE` → `SINK` trong đồ thị dư (residual graph) bằng **Dijkstra**.  
-   - Xác định **lượng hàng có thể gửi thêm** (bottleneck).  
-   - Cập nhật:
-     - Luồng mới trên từng cạnh.
-     - Tổng chi phí += (lượng hàng) × (chi phí trên đường đó).
-3. Lặp lại cho đến khi tất cả nhu cầu được thỏa mãn.
-
----
-
-### **Bước 3: Kết quả tối ưu**
-
-Sau khi hoàn tất:
-- Chương trình sẽ trích xuất bảng phân phối cuối cùng:
-  - Cột `From` – trạm phát.
-  - Cột `To` – trạm thu.
-  - Cột `Quantity` – số lượng gửi.
-  - `UnitCost` – chi phí đơn vị.
-  - `Cost` – tổng chi phí cho tuyến đó.
-
----
-
-##  Kết quả đầu ra
-
-File kết quả: **`allocation_optimal.xlsx`**
-
-Bao gồm 4 sheet:
-1. `OptimalPlan` – chi tiết kế hoạch phân phối tối ưu  
-2. `SupplySummary` – tổng hàng đã gửi của từng trạm phát  
-3. `DemandSummary` – tổng hàng đã nhận của từng trạm thu  
-4. `Summary` – tổng chi phí tối thiểu
-
----
-
-## 💻 Cách chạy chương trình
-
-### 1️⃣ Cài đặt môi trường
+### Bước 2: Chạy chương trình
 ```bash
-python -m venv venv
-venv\Scripts\activate
-
-pip install -r requirements.txt
+python main.py du_lieu_phan_phoi.xlsx
 ```
 
-### 2️⃣ Chạy chương trình
-```bash
-python3 distribution_optimizer_from_file.py du_lieu_phan_phoi.xlsx
+### Bước 3: Xem kết quả
+- Kết quả hiển thị trên màn hình
+- File `result.xlsx` được tạo tự động
+
+## Ví Dụ Kết Quả
+
+### Trên màn hình:
+```
+=== KẾ HOẠCH TỐI ƯU ===
+    From          To  Quantity  UnitCost    Cost
+  Kho A  Cửa hàng 1        80         5     400
+  Kho B  Cửa hàng 2       120         6     720
+  Kho C  Cửa hàng 3       150         4     600
+
+Tổng chi phí: 1,720 VND
+
+Đã lưu kết quả vào: result.xlsx
 ```
 
-### 3️⃣ Xem kết quả
-- Màn hình sẽ hiển thị kết quả tóm tắt.
-- File Excel `allocation_optimal.xlsx` sẽ được tạo trong cùng thư mục.
+### File result.xlsx có 2 sheet:
+1. **Plan**: Bảng chi tiết từng tuyến vận chuyển
+2. **Summary**: Tổng chi phí
 
----
+## Giải Thích Code
 
-##  Cấu trúc thư mục
+Code có 4 hàm chính, rất đơn giản:
+
+### 1. `read_excel(file_path)` - Đọc dữ liệu
+```python
+# Đọc 3 sheet từ file Excel
+# Chuyển đổi thành dictionary để xử lý dễ dàng
+# Trả về: supply, demand, costs
 ```
-project/
-├── distribution_optimizer_from_file.py   # Mã nguồn chính
-├── requirements.txt                      # Các thư viện cần cài
-├── du_lieu_phan_phoi.xlsx                # File đầu vào mẫu
-└── allocation_optimal.xlsx               # File kết quả (tự động tạo)
+
+### 2. `find_optimal_plan(supply, demand, costs)` - Tìm phương án
+```python
+# Vòng lặp chính:
+while còn nhu cầu chưa đáp ứng:
+    # Tìm tuyến đường rẻ nhất
+    for mỗi trạm phát:
+        for mỗi trạm thu:
+            if chi_phí < chi_phí_tốt_nhất:
+                lưu_lại_tuyến_này
+    
+    # Chuyển hàng trên tuyến rẻ nhất
+    số_lượng = min(hàng_còn_lại, nhu_cầu_còn_lại)
+    ghi_nhận_kết_quả
+    cập_nhật_số_lượng_còn_lại
 ```
 
----
+### 3. `save_excel(df, total_cost)` - Lưu kết quả
+```python
+# Ghi kết quả vào file Excel với 2 sheet:
+# - Plan: Chi tiết phân phối
+# - Summary: Tổng chi phí
+```
+
+### 4. `main()` - Hàm chính
+```python
+# Điều phối toàn bộ chương trình:
+# Đọc → Tính toán → Hiển thị → Lưu
+```
